@@ -43,5 +43,7 @@ protected:
 
 private:
 
+	bool GetGrabbableInReach(FHitResult& OutHitResult) const;
+
 	class UPhysicsHandleComponent* GetPhysicsHandle() const;
 };

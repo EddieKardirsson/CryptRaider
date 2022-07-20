@@ -59,22 +59,8 @@ void UGrabberComponent::Grab()
 		return;
 	}
 
-	FVector LineStart = GetComponentLocation();
-	FVector LineEnd = GetComponentLocation() + (GetForwardVector() * MaxDistance);	
-	DrawDebugLine(GetWorld(), LineStart, LineEnd, FColor::Red, true);
-	DrawDebugSphere(GetWorld(), LineEnd, 10, 10, FColor::Blue, false, 5);
-
-	FCollisionShape SphereShape = FCollisionShape::MakeSphere(GrabRadius);
 	FHitResult HitResult;
-
-	bool bHasHit = GetWorld()->SweepSingleByChannel(
-		HitResult, 
-		LineStart, 
-		LineEnd, 
-		FQuat::Identity,
-		ECC_GameTraceChannel2,
-		SphereShape
-	);
+	bool bHasHit = GetGrabbableInReach(HitResult);
 
 	if (bHasHit) {
 		float LineDistance = FVector::Distance(HitResult.Location, HitResult.ImpactPoint);
@@ -107,6 +93,25 @@ void UGrabberComponent::Release()
 		PhysicsHandle->GetGrabbedComponent()->WakeAllRigidBodies();
 		PhysicsHandle->ReleaseComponent();
 	}
+}
+
+bool UGrabberComponent::GetGrabbableInReach(FHitResult& OutHitResult) const
+{
+	FVector LineStart = GetComponentLocation();
+	FVector LineEnd = GetComponentLocation() + (GetForwardVector() * MaxDistance);
+	DrawDebugLine(GetWorld(), LineStart, LineEnd, FColor::Red, true);
+	DrawDebugSphere(GetWorld(), LineEnd, 10, 10, FColor::Blue, false, 5);
+
+	FCollisionShape SphereShape = FCollisionShape::MakeSphere(GrabRadius);	
+
+	return GetWorld()->SweepSingleByChannel(
+		OutHitResult,
+		LineStart,
+		LineEnd,
+		FQuat::Identity,
+		ECC_GameTraceChannel2,
+		SphereShape
+	);
 }
 
 UPhysicsHandleComponent* UGrabberComponent::GetPhysicsHandle() const
