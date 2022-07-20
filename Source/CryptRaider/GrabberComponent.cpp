@@ -8,6 +8,7 @@
 #include "Math/Rotator.h"
 #include "CollisionShape.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
+#include "Components/PrimitiveComponent.h"
 
 // Sets default values for this component's properties
 UGrabberComponent::UGrabberComponent()
@@ -43,8 +44,11 @@ void UGrabberComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		return;
 	}
 
-	FVector TargetLocation = GetComponentLocation() + (GetForwardVector() * HoldDistance);
-	PhysicsHandle->SetTargetLocationAndRotation(TargetLocation, GetComponentRotation());
+	if (PhysicsHandle->GetGrabbedComponent() != nullptr) 
+	{
+		FVector TargetLocation = GetComponentLocation() + (GetForwardVector() * HoldDistance);
+		PhysicsHandle->SetTargetLocationAndRotation(TargetLocation, GetComponentRotation());
+	}
 }
 
 void UGrabberComponent::Grab()
@@ -77,8 +81,11 @@ void UGrabberComponent::Grab()
 		UE_LOG(LogTemp, Warning, TEXT("Length between ImpactPoint and Location: %f"), LineDistance);
 		DrawDebugSphere(GetWorld(), HitResult.Location, 10, 10, FColor::Green, false, 5);
 		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 10, 10, FColor::Red,false,5);
+
+		UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+		HitComponent->WakeAllRigidBodies();
 		PhysicsHandle->GrabComponentAtLocationWithRotation(
-			HitResult.GetComponent(), 
+			HitComponent, 
 			NAME_None,
 			HitResult.ImpactPoint, 
 			GetComponentRotation()
@@ -89,6 +96,17 @@ void UGrabberComponent::Grab()
 void UGrabberComponent::Release()
 {
 	//UE_LOG(LogTemp, Display, TEXT("Released"));
+	UPhysicsHandleComponent* PhysicsHandle = GetPhysicsHandle();
+	if (PhysicsHandle == nullptr)
+	{
+		return;
+	}
+	
+	if (PhysicsHandle->GetGrabbedComponent() != nullptr)
+	{		
+		PhysicsHandle->GetGrabbedComponent()->WakeAllRigidBodies();
+		PhysicsHandle->ReleaseComponent();
+	}
 }
 
 UPhysicsHandleComponent* UGrabberComponent::GetPhysicsHandle() const
