@@ -9,6 +9,7 @@
 #include "CollisionShape.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Containers/Array.h"
 
 // Sets default values for this component's properties
 UGrabberComponent::UGrabberComponent()
@@ -39,12 +40,7 @@ void UGrabberComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	// ...
 
 	UPhysicsHandleComponent* PhysicsHandle = GetPhysicsHandle();
-	if (PhysicsHandle == nullptr)
-	{
-		return;
-	}
-
-	if (PhysicsHandle->GetGrabbedComponent() != nullptr) 
+	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent()) 
 	{
 		FVector TargetLocation = GetComponentLocation() + (GetForwardVector() * HoldDistance);
 		PhysicsHandle->SetTargetLocationAndRotation(TargetLocation, GetComponentRotation());
@@ -69,7 +65,11 @@ void UGrabberComponent::Grab()
 		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 10, 10, FColor::Red,false,5);
 
 		UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+		HitComponent->SetSimulatePhysics(true);
 		HitComponent->WakeAllRigidBodies();
+		AActor* HitActor = HitResult.GetActor();
+		HitActor->Tags.Add("Grabbed");
+		HitActor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		PhysicsHandle->GrabComponentAtLocationWithRotation(
 			HitComponent, 
 			NAME_None,
@@ -81,16 +81,11 @@ void UGrabberComponent::Grab()
 
 void UGrabberComponent::Release()
 {
-	//UE_LOG(LogTemp, Display, TEXT("Released"));
-	UPhysicsHandleComponent* PhysicsHandle = GetPhysicsHandle();
-	if (PhysicsHandle == nullptr)
+	UPhysicsHandleComponent* PhysicsHandle = GetPhysicsHandle();	
+	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
 	{
-		return;
-	}
-	
-	if (PhysicsHandle->GetGrabbedComponent() != nullptr)
-	{		
-		PhysicsHandle->GetGrabbedComponent()->WakeAllRigidBodies();
+		auto GrabbedActor = PhysicsHandle->GetGrabbedComponent()->GetOwner();
+		GrabbedActor->Tags.Remove("Grabbed");
 		PhysicsHandle->ReleaseComponent();
 	}
 }
